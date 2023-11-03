@@ -70,7 +70,11 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     self.captureSession.addOutput(self.videoDataOutput)
     guard let connection = self.videoDataOutput.connection(with: AVMediaType.video),
           connection.isVideoRotationAngleSupported(90) else { return }
-    connection.videoRotationAngle = 90
+    if #available(iOS 17.0, *) {
+      connection.videoRotationAngle = 90
+    } else {
+      connection.videoOrientation = .portrait
+    }
   }
   
   private func detectFace(in image: CVPixelBuffer) {
@@ -91,7 +95,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     
     self.clearDrawings()
     let facesBoundingBoxes: [CAShapeLayer] = observedFaces.flatMap({ (observedFace: VNFaceObservation) -> [CAShapeLayer] in
-      print("Yaw: \(observedFace.yaw), Roll: \(observedFace.roll), Pitch: \(observedFace.pitch)")
       if Float(truncating: observedFace.yaw ?? 0)  > 0 {
         turnRight.isHidden = false
       }
