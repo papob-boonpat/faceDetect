@@ -17,6 +17,10 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
   private let videoDataOutput = AVCaptureVideoDataOutput()
   private var drawings: [CAShapeLayer] = []
   
+  @IBOutlet weak var previewView: UIView!
+  @IBOutlet weak var turnLeft: UILabel!
+  @IBOutlet weak var turnRight: UILabel!
+  @IBOutlet weak var eyeClose: UILabel!
   override func viewDidLoad() {
     super.viewDidLoad()
     self.addCameraInput()
@@ -27,7 +31,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
   
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    self.previewLayer.frame = self.view.frame
+    self.previewLayer.frame = self.previewView.frame
   }
   
   func captureOutput(
@@ -55,8 +59,8 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
   
   private func showCameraFeed() {
     self.previewLayer.videoGravity = .resizeAspectFill
-    self.view.layer.addSublayer(self.previewLayer)
-    self.previewLayer.frame = self.view.frame
+    self.previewView.layer.addSublayer(self.previewLayer)
+    self.previewLayer.frame = self.previewView.frame
   }
   
   private func getCameraFrames() {
@@ -88,6 +92,12 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     self.clearDrawings()
     let facesBoundingBoxes: [CAShapeLayer] = observedFaces.flatMap({ (observedFace: VNFaceObservation) -> [CAShapeLayer] in
       print("Yaw: \(observedFace.yaw), Roll: \(observedFace.roll), Pitch: \(observedFace.pitch)")
+      if Float(truncating: observedFace.yaw ?? 0)  > 0 {
+        turnRight.isHidden = false
+      }
+      if Float(truncating: observedFace.yaw ?? 0)  < 0 {
+        turnLeft.isHidden = false
+      }
       let faceBoundingBoxOnScreen = self.previewLayer.layerRectConverted(fromMetadataOutputRect: observedFace.boundingBox)
       let faceBoundingBoxPath = CGPath(rect: faceBoundingBoxOnScreen, transform: nil)
       let faceBoundingBoxShape = CAShapeLayer()
@@ -101,7 +111,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
       }
       return newDrawings
     })
-    facesBoundingBoxes.forEach({ faceBoundingBox in self.view.layer.addSublayer(faceBoundingBox) })
+    facesBoundingBoxes.forEach({ faceBoundingBox in self.previewView.layer.addSublayer(faceBoundingBox) })
     self.drawings = facesBoundingBoxes
   }
   
@@ -130,6 +140,10 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
           x: eyePoint.y * screenBoundingBox.height + screenBoundingBox.origin.x,
           y: eyePoint.x * screenBoundingBox.width + screenBoundingBox.origin.y)
       })
+    let isEyeClose = (abs(eyePathPoints[1].y - eyePathPoints[5].y) + abs(eyePathPoints[3].y - eyePathPoints[4].y))/(2 * abs(eyePathPoints[0].x - eyePathPoints[3].x))
+    if isEyeClose < 0.1 {
+      eyeClose.isHidden = false
+    }
     eyePath.addLines(between: eyePathPoints)
     eyePath.closeSubpath()
     let eyeDrawing = CAShapeLayer()
